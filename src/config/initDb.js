@@ -1,0 +1,161 @@
+const pool = require('./database.js');
+
+/**
+ * Create tables if they don't exist
+ */
+const createTables = async () => {
+  try {
+    // Create all tables
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        name VARCHAR(255),
+        role VARCHAR(50) DEFAULT 'user',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE TABLE IF NOT EXISTS jobs (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        company VARCHAR(255) NOT NULL,
+        description TEXT,
+        location VARCHAR(255),
+        salary_min DECIMAL(10, 2),
+        salary_max DECIMAL(10, 2),
+        salary_currency VARCHAR(10) DEFAULT 'MYR',
+        job_type VARCHAR(50),
+        experience_level VARCHAR(50),
+        requirements TEXT,
+        benefits TEXT,
+        user_id INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS job_applications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        job_id INTEGER REFERENCES jobs(id),
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS personal_info (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) UNIQUE,
+        full_name VARCHAR(255),
+        identification_number VARCHAR(100),
+        date_of_birth DATE,
+        gender VARCHAR(20),
+        nationality VARCHAR(100),
+        race VARCHAR(100),
+        marital_status VARCHAR(50),
+        contact_number VARCHAR(50),
+        current_address TEXT,
+        permanent_address TEXT,
+        same_as_current_address BOOLEAN DEFAULT false,
+        expected_salary VARCHAR(100),
+        preferred_position VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS education (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) UNIQUE,
+        highest_qualification VARCHAR(255),
+        field_of_study VARCHAR(255),
+        institution VARCHAR(255),
+        year_graduated VARCHAR(10),
+        cgpa VARCHAR(10),
+        additional_certifications TEXT[],
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS employment_history (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        company_name VARCHAR(255),
+        position VARCHAR(255),
+        start_date DATE,
+        end_date DATE,
+        is_currently_working BOOLEAN DEFAULT false,
+        key_responsibilities TEXT,
+        reason_for_leaving TEXT,
+        reference_name VARCHAR(255),
+        reference_position VARCHAR(255),
+        reference_contact VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS user_skills (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) UNIQUE,
+        technical_skills TEXT[],
+        soft_skills TEXT[],
+        additional_competencies TEXT[],
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS user_languages (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        language VARCHAR(100),
+        proficiency VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS user_references (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        name VARCHAR(255),
+        relationship VARCHAR(255),
+        company_position VARCHAR(255),
+        contact_number VARCHAR(50),
+        email VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS user_documents (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        document_type VARCHAR(100),
+        file_name VARCHAR(255),
+        file_path VARCHAR(500),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS declarations (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) UNIQUE,
+        agree_to_terms BOOLEAN DEFAULT false,
+        signature VARCHAR(255),
+        declaration_date DATE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Add migration for existing databases - add missing job columns if they don't exist
+    try {
+      await pool.query(`
+        ALTER TABLE jobs
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+      `);
+    } catch (err) {
+      // Column might already exist, silently continue
+    }
+
+    console.log('Tables created or already exist');
+  } catch (err) {
+    console.error('Error creating tables:', err);
+  }
+};
+
+module.exports = {
+  createTables
+};
